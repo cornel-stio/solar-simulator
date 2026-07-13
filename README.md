@@ -4,6 +4,8 @@
 
 Solar Simulator bridges the gap between residential solar calculators and commercial-grade engineering software. It allows users to map real-world roof geometry, process 8,760-hour localized weather and load data, and instantly run complex combinatorial physics simulations to determine optimal hardware sizing, stringing combinations, and battery logic.
 
+**Live Demo:** [https://solar-simulator-cstio.vercel.app/](https://solar-simulator-cstio.vercel.app/)
+
 ---
 
 ## 🚀 Key Features
