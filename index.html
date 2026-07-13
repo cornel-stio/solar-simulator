@@ -303,7 +303,7 @@
         targetInput.value = "Reading CSV...";
 
         try {
-            const response = await fetch(`http://127.0.0.1:8000/load-profile-total?profile_name=${encodeURIComponent(profile)}`);
+            const response = await fetch(`/load-profile-total?profile_name=${encodeURIComponent(profile)}`);
             const data = await response.json();
             targetInput.type = "number";
             if (data.status === "success") {
@@ -510,7 +510,7 @@
         };
 
         try {
-            const response = await fetch("http://127.0.0.1:8000/simulate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(requestData) });
+            const response = await fetch("/simulate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(requestData) });
             const result = await response.json();
 
             if (result.status === "success") {

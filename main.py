@@ -6,6 +6,7 @@ from pvlib.location import Location
 from pvlib.modelchain import ModelChain
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Optional
 from timezonefinder import TimezoneFinder
@@ -441,6 +442,10 @@ def create_system(selected_mod, best_config, array_configs, location):
     )
 
 app = FastAPI(title="Indo Solar API")
+
+@app.get("/")
+def serve_homepage():
+    return FileResponse("index.html")
 
 app.add_middleware(
     CORSMiddleware,
