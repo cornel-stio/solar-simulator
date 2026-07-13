@@ -19,6 +19,10 @@ Solar Simulator bridges the gap between residential solar calculators and commer
 
 ---
 
+![Map Interface Placeholder]<img width="959" height="503" alt="Screenshot 2026-07-13 224208" src="https://github.com/user-attachments/assets/e45048e1-fc74-44ab-a054-be19c21eb0ad" />
+
+---
+
 ## 🛠️ Tech Stack
 
 **Backend (Physics & Data Engine):**
