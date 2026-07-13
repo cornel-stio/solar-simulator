@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar Simulator</title>
+
+    <!-- Leaflet Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+
+    <!-- Chart.js for the Modal Graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; font-family: Arial, sans-serif; overflow: hidden; background: #2c3e50;}
+        #map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+
+        .calculator-box {
+            position: absolute; top: 20px; left: 20px; width: 400px;
+            background: rgba(255, 255, 255, 0.95); padding: 25px;
+            border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            z-index: 1000; max-height: calc(100vh - 40px); overflow-y: auto; backdrop-filter: blur(5px);
+        }
+
+        h2 { color: #2c3e50; text-align: center; margin-top: 0; margin-bottom: 20px;}
+        .step-header { font-size: 14px; font-weight: bold; color: #2980b9; border-bottom: 2px solid #ecf0f1; padding-bottom: 5px; margin-top: 15px; margin-bottom: 10px; }
+
+        label { font-weight: bold; margin-top: 12px; display: block; color: #34495e; font-size: 13px;}
+        input, select { width: 100%; padding: 10px; margin-top: 4px; border: 1px solid #bdc3c7; border-radius: 5px; box-sizing: border-box; }
+
+        .search-container { display: flex; gap: 8px; margin-top: 4px; }
+        .search-container input { margin-top: 0; }
+        .search-container button { margin-top: 0; width: 40%; padding: 10px; background-color: #2980b9; color:white; border:none; border-radius:4px; cursor:pointer;}
+
+        button.action-btn { width: 100%; padding: 15px; background-color: #27ae60; color: white; border: none; border-radius: 5px; font-size: 16px; margin-top: 20px; cursor: pointer; font-weight: bold; transition: 0.2s;}
+        button.action-btn:hover { background-color: #2ecc71; }
+        button:disabled { background-color: #95a5a6; cursor: not-allowed; }
+
+        .load-section { background: #f1f2f6; padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px solid #dcdde1;}
+
+        @keyframes pop { 0% {transform: scale(0.95); opacity: 0.5;} 100% {transform: scale(1); opacity: 1;} }
+        .roof-card { background: #f8f9fa; border: 2px solid #3498db; border-radius: 8px; padding: 15px; margin-top: 15px; animation: pop 0.4s ease-out; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .roof-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; color: #2980b9; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px;}
+
+        .map-compass-container { width: 80px; height: 80px; background: rgba(255,255,255,0.8); border-radius: 50%; border: 4px solid #2c3e50; position: relative; box-shadow: 0 4px 10px rgba(0,0,0,0.5); cursor: grab; display: flex; justify-content: center; align-items: center; }
+        .map-compass-container::before { content: 'N'; position: absolute; top: 2px; font-size: 12px; font-weight: bold; color: #2c3e50; }
+        .map-compass-container::after { content: 'S'; position: absolute; bottom: 2px; font-size: 12px; font-weight: bold; color: #2c3e50; }
+        .compass-center { width: 14px; height: 14px; background: #2c3e50; border-radius: 50%; position: absolute; top: 29px; left: 29px; z-index: 10; cursor: move; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        .map-compass-arrow { width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 35px solid #e74c3c; position: absolute; top: 1px; left: 28px; transform-origin: 8px 35px; pointer-events: none; }
+        .tilt-visualizer { width: 100%; height: 90px; background: #ecf0f1; margin-top: 10px; border-radius: 5px; position: relative; overflow: hidden; border: 1px solid #bdc3c7; cursor: ns-resize; }
+        .roof-line { width: 80%; height: 12px; background: #2980b9; border: 2px solid #1abc9c; border-radius:3px; position: absolute; bottom: 20px; left: 10%; transform-origin: left center; pointer-events: none; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+        .house-base { width: 100%; height: 20px; background: #7f8c8d; position: absolute; bottom: 0;}
+        .tilt-instruction { position:absolute; top: 5px; left: 10px; font-size: 10px; color:#7f8c8d; pointer-events:none;}
+
+        #top3-results { display: none; margin-top: 20px; }
+        .result-option { background: white; border: 2px solid #3498db; border-radius: 8px; padding: 15px; margin-bottom: 10px; cursor: pointer; transition: 0.2s;}
+        .result-option:hover { background: #ebf5fb; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .rank-badge { background: #3498db; color: white; padding: 3px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+
+        /* MODAL */
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
+        .modal-content { background-color: #fdfdfd; margin: 2.5vh auto; padding: 30px; width: 95vw; height: 95vh; border-radius: 12px; box-sizing: border-box; display: flex; flex-direction: column; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow-y: auto;}
+        .close-btn { position: absolute; right: 20px; top: 15px; font-size: 30px; font-weight: bold; color: #7f8c8d; cursor: pointer; }
+        .close-btn:hover { color: #c0392b; }
+
+        .modal-header { border-bottom: 2px solid #eee; padding-bottom: 15px; margin-bottom: 20px; }
+        .modal-grid { display: flex; gap: 20px; flex-wrap: wrap; }
+        .stat-box { background: white; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0; flex: 1; min-width: 150px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02);}
+        .stat-val { font-size: 24px; font-weight: bold; color: #2c3e50; margin: 10px 0 5px 0; }
+        .stat-label { font-size: 12px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 1px;}
+
+        .charts-container { display: flex; gap: 20px; margin-top: 15px; min-height: 250px; }
+        .chart-wrapper { flex: 1; background: white; border-radius: 8px; border: 1px solid #e0e0e0; padding: 15px; position: relative; }
+
+        /* Wiring Layout Box */
+        .wiring-box { background: #f8f9fa; border: 1px solid #dcdde1; border-radius: 8px; padding: 20px; margin-top: 20px; }
+        .wiring-box h4 { margin: 0 0 10px 0; color: #2c3e50; }
+        .wiring-list { margin: 0; padding-left: 20px; color: #34495e; font-size: 14px; line-height: 1.6; }
+
+        /* Interactive Chart Hint */
+        #chart-hint { text-align: center; color: #2980b9; font-size: 13px; font-weight: bold; margin-top: 10px; }
+
+        /* Sleek Hover Tooltips */
+        .tooltip { position: relative; display: inline-block; cursor: help; color: #3498db; margin-left: 5px; font-weight: bold; font-size: 12px; background: #e8f4f8; border-radius: 50%; width: 16px; height: 16px; text-align: center; line-height: 16px; }
+        .tooltip .tooltiptext { visibility: hidden; width: 220px; background-color: #2c3e50; color: #ecf0f1; text-align: left; border-radius: 6px; padding: 10px; position: absolute; z-index: 2000; bottom: 130%; left: 50%; transform: translateX(-50%); opacity: 0; transition: opacity 0.2s; font-size: 11px; font-weight: normal; line-height: 1.4; box-shadow: 0 4px 6px rgba(0,0,0,0.2); pointer-events: none; }
+        .tooltip .tooltiptext::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px; border-width: 5px; border-style: solid; border-color: #2c3e50 transparent transparent transparent; }
+        .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div class="calculator-box">
+    <h2>Solar Simulator</h2>
+
+    <div class="step-header">Step 1: Find Your Building</div>
+    <div class="search-container">
+        <input type="text" id="address-input" placeholder="e.g., ITB Bandung...">
+        <button type="button" onclick="geocodeAddress()">Search</button>
+    </div>
+
+    <!-- Hidden coordinate inputs -->
+    <input type="hidden" id="lat" value="-6.2000">
+    <input type="hidden" id="lon" value="106.8166">
+
+    <div class="step-header">Step 2: Hardware & Consumption</div>
+    <select id="panel-brand">
+        <option value="Canadian_Solar_Inc__CS6K_285M">Canadian Solar 285W</option>
+        <option value="LONGi_Green_Energy_Technology_Co___Ltd__LR5_72HBD_540M">Longi Hi-MO 540W</option>
+    </select>
+
+    <div class="load-section">
+        <label style="margin-top:0; cursor:pointer;">
+            <input type="checkbox" id="use-load" onchange="toggleLoadInputs()" style="width:auto; display:inline;">
+            Simulate Energy Consumption
+        </label>
+
+        <label style="margin-top:10px; cursor:pointer; color: #d35400;">
+            <input type="checkbox" id="is-commercial" style="width:auto; display:inline;">
+            Non-Residential / Commercial Scale
+        </label>
+
+        <div id="load-inputs" style="display:none; margin-top: 10px;">
+            <label>Load Profile Template:</label>
+            <select id="load-profile-name" onchange="updateDefaultLoad()">
+                <option value="households default">Standard Family Home</option>
+                <option value="general business default">General Business / Commercial</option>
+                <option value="farms default">General Agriculture</option>
+                <option value="dairy farms default">Dairy Farm Facility</option>
+                <option value="CHR02 Couple, 30 - 64 age, with work">Couple, 30 - 64 age, with work</option>
+                <option value="CHR04 Couple, 30 - 64 years, 1 at work, 1 at home">Couple, 30 - 64 years, 1 at work, 1 at home</option>
+                <option value="CHR03 Family, 1 child, both at work">Family, 1 child, both at work</option>
+                <option value="CHR05 Family, 3 children, both with work">Family, 3 children, both with work</option>
+                <option value="CHR15 Multigenerational Home working couple,2 children,2 seniors">Working couple, 2 children, 2 seniors</option>
+                <option value="CHR16 Couple over 65 years">Couple over 65 years</option>
+                <option value="CHR20 one at work, one work home, 3 children">Family, 1 at work, 1 at home, 3 children</option>
+                <option value="CHR53 2 Parents, 1 Working, 2 Children">Family, 1 at work, 3 children</option>
+            </select>
+
+            <div id="template-warning" style="display:none; font-size: 11px; color: #d35400; background: #fdebd0; padding: 10px; border-radius: 5px; margin-top: 10px; border-left: 4px solid #e67e22;">
+                <strong>⚠️ Generalized Template Selected:</strong> This is a common, non-curated load curve shape. We highly recommend entering your actual annual consumption below for accurate calculations.
+            </div>
+
+            <div style="margin-top: 12px; font-size: 13px; color: #2c3e50;">
+                <label style="display:inline; font-weight:normal; cursor:pointer;">
+                    <input type="radio" name="loadMode" id="mode-manual" value="manual" checked onchange="toggleLoadMode()" style="width:auto; display:inline; margin:0;"> Exact kWh
+                </label>
+                <label style="display:inline; font-weight:normal; margin-left:15px; cursor:pointer;">
+                    <input type="radio" name="loadMode" id="mode-estimate" value="estimate" onchange="toggleLoadMode()" style="width:auto; display:inline; margin:0;"> Estimate by Family
+                </label>
+            </div>
+
+            <!-- Manual Input Mode -->
+            <div id="manual-load-div" style="margin-top: 10px;">
+                <label>Target Annual Consumption (kWh):
+                    <span class="tooltip">?<span class="tooltiptext">If you know your usage from your utility bill, enter it here. This number acts as a scaler to adjust the shape of the load profile to match your actual home's consumption.</span></span>
+                </label>
+                <input type="number" id="load-target" value="3500">
+            </div>
+
+            <!-- Estimation Input Mode -->
+            <div id="estimate-load-div" style="display:none; margin-top: 10px;">
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1;"><label style="font-size:11px;">Adults</label><input type="number" id="est-adults" value="2" min="0" oninput="calculateEstimatedLoad()"></div>
+                    <div style="flex:1;"><label style="font-size:11px;">Children</label><input type="number" id="est-kids" value="0" min="0" oninput="calculateEstimatedLoad()"></div>
+                    <div style="flex:1;"><label style="font-size:11px;">Seniors</label><input type="number" id="est-seniors" value="0" min="0" oninput="calculateEstimatedLoad()"></div>
+                </div>
+                <div style="font-size: 12px; color: #7f8c8d; margin-top: 5px; text-align: right;">
+                    Estimated: <strong id="est-display" style="color: #27ae60;">3500 kWh</strong>/yr
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="step-header">Step 3: Draw Your Roof Spaces</div>
+    <label style="color: #7f8c8d; font-weight: normal; margin-top: 5px;">Use the polygon tool (top right of map) to trace your roof.</label>
+
+    <div id="roof-spaces-container"></div>
+
+    <button onclick="calculateSolar()" class="action-btn" id="calc-btn" style="display:none;">Analyze Configurations</button>
+    <button onclick="clearRoofs()" style="width: 100%; padding: 10px; background: #e74c3c; color: white; border: none; border-radius: 5px; margin-top: 10px; cursor:pointer;">Clear Map</button>
+
+    <!-- RESULTS CONTAINER -->
+    <div id="top3-results">
+        <h3 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px;">Top 3 Configurations</h3>
+        <div id="options-list"></div>
+    </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- THE 95% OVERLAY MODAL -->
+<!-- ======================================================== -->
+<div id="analysisModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeModal()">&times;</span>
+
+        <div class="modal-header">
+            <h1 style="margin:0; color:#2c3e50;">Detailed System Analysis</h1>
+        </div>
+
+        <div class="modal-grid">
+            <div class="stat-box">
+                <div class="stat-label">Total Panels</div>
+                <div class="stat-val" id="m-panels">-</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Annual Generation</div>
+                <div class="stat-val" style="color:#27ae60;" id="m-generation">-</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Load Coverage</div>
+                <div class="stat-val" style="color:#2980b9;" id="m-coverage">-</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Optimal Battery</div>
+                <div class="stat-val" style="color:#e67e22;" id="m-battery">-</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">DC/AC Ratio</div>
+                <div class="stat-val" id="m-ratio">-</div>
+            </div>
+        </div>
+
+        <div class="wiring-box" id="m-wiring-box">
+            <h4>⚙️ Hardware & Wiring Layout</h4>
+            <ul class="wiring-list" id="m-wiring"></ul>
+        </div>
+
+        <!-- CHARTS SEPARATED -->
+        <div class="charts-container" style="min-height: 200px;">
+            <div class="chart-wrapper">
+                <canvas id="monthlyChart"></canvas>
+                <div id="chart-hint">Click any month bar to filter the daily charts below (Click background to reset)</div>
+            </div>
+        </div>
+        <div class="charts-container" style="min-height: 250px;">
+            <div class="chart-wrapper">
+                <canvas id="dailySolarChart"></canvas>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="dailyLoadChart"></canvas>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    let map, marker, drawnItems;
+    let roofCount = 0;
+    let compassMarkers = {};
+    let activeCompassId = null;
+    let activeTiltId = null;
+
+    let globalSimulationData = null;
+    let monthlyChartObj = null;
+    let dailySolarChartObj = null;
+    let dailyLoadChartObj = null;
+
+    // Globals to hold active chart data for dynamic filtering
+    let currentSolar8760 = [];
+    let currentLoad8760 = [];
+    let currentSoc8760 = [];
+
+    // Toggle Load inputs visibility
+    function toggleLoadInputs() {
+        let isChecked = document.getElementById('use-load').checked;
+        document.getElementById('load-inputs').style.display = isChecked ? 'block' : 'none';
+        if(isChecked) updateDefaultLoad();
+    }
+
+    function toggleLoadMode() {
+        const isEstimate = document.getElementById('mode-estimate').checked;
+        document.getElementById('manual-load-div').style.display = isEstimate ? 'none' : 'block';
+        document.getElementById('estimate-load-div').style.display = isEstimate ? 'flex' : 'none';
+        if(isEstimate) calculateEstimatedLoad();
+    }
+
+    const profileDefaults = {
+        "households default": 3500,          // Standard home
+        "general business default": 25000,  // Small to medium business
+        "farms default": 15000,     // Barn lighting, small equipment
+        "dairy farms default": 40000        // Heavy cooling and milking machinery
+    };
+
+    async function updateDefaultLoad() {
+        const profile = document.getElementById('load-profile-name').value;
+        let targetInput = document.getElementById('load-target');
+        let warningBox = document.getElementById('template-warning');
+
+        if (profileDefaults.hasOwnProperty(profile)) {
+            warningBox.style.display = "block";
+            targetInput.type = "number";
+            targetInput.value = profileDefaults[profile];
+            return;
+        }
+        warningBox.style.display = "none";
+        targetInput.type = "text";
+        targetInput.value = "Reading CSV...";
+
+        try {
+            const response = await fetch(`http://127.0.0.1:8000/load-profile-total?profile_name=${encodeURIComponent(profile)}`);
+            const data = await response.json();
+            targetInput.type = "number";
+            if (data.status === "success") {
+                targetInput.value = Math.round(data.total_kwh);
+            } else {
+                targetInput.value = 3500;
+            }
+        } catch (error) {
+            targetInput.type = "number";
+            targetInput.value = 3500;
+        }
+    }
+
+    function calculateEstimatedLoad() {
+        let adults = parseInt(document.getElementById('est-adults').value) || 0;
+        let kids = parseInt(document.getElementById('est-kids').value) || 0;
+        let seniors = parseInt(document.getElementById('est-seniors').value) || 0;
+        let estimatedKwh = 1200 + (adults * 900) + (kids * 500) + (seniors * 1100);
+
+        document.getElementById('est-display').innerText = estimatedKwh + " kWh";
+        document.getElementById('load-target').value = estimatedKwh;
+    }
+
+    // ==========================================
+    // 1. SET UP MAP & DRAWING TOOLS
+    // ==========================================
+    document.addEventListener("DOMContentLoaded", function() {
+        map = L.map('map', { zoomControl: false }).setView([-6.2000, 106.8166], 18);
+        L.control.zoom({ position: 'topright' }).addTo(map);
+
+        let streetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
+        let satelliteMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(map);
+        L.control.layers({"Satellite View": satelliteMap, "Street Map": streetMap}, null, { position: 'topright' }).addTo(map);
+
+        marker = L.marker([-6.2000, 106.8166], {draggable: true}).addTo(map);
+        marker.on('dragend', function(e) {
+            let pos = marker.getLatLng();
+            document.getElementById('lat').value = pos.lat;
+            document.getElementById('lon').value = pos.lng;
+        });
+
+        drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+
+        let drawControl = new L.Control.Draw({
+            position: 'topright',
+            draw: { polygon: { shapeOptions: { color: '#2ecc71', fillOpacity: 0.4 } }, polyline: false, rectangle: false, circle: false, marker: false, circlemarker: false }
+        });
+        map.addControl(drawControl);
+
+        map.on('draw:drawstart', function() {
+            marker.setOpacity(0);
+            for(let id in compassMarkers) compassMarkers[id].setOpacity(0);
+        });
+        map.on('draw:drawstop', function() {
+            marker.setOpacity(1);
+            for(let id in compassMarkers) compassMarkers[id].setOpacity(1);
+        });
+
+        map.on(L.Draw.Event.CREATED, function (e) {
+            let layer = e.layer;
+            drawnItems.addLayer(layer);
+            let latlngs = layer.getLatLngs()[0];
+            let areaSqm = L.GeometryUtil.geodesicArea(latlngs);
+            let estimatedPanels = Math.max(1, Math.floor(areaSqm / 2.5));
+
+            roofCount++;
+            createRoofCard(roofCount, areaSqm, estimatedPanels);
+            createOnMapCompass(roofCount, layer.getBounds().getCenter());
+
+            document.getElementById('lat').value = latlngs[0].lat;
+            document.getElementById('lon').value = latlngs[0].lng;
+
+            document.getElementById('calc-btn').style.display = "block";
+            const container = document.querySelector('.calculator-box');
+            container.scrollTop = container.scrollHeight;
+        });
+    });
+
+    async function geocodeAddress() {
+        const address = document.getElementById('address-input').value;
+        if (!address) return;
+        try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`);
+            const data = await response.json();
+            if (data.length > 0) {
+                map.setView([parseFloat(data[0].lat), parseFloat(data[0].lon)], 19);
+                marker.setLatLng([parseFloat(data[0].lat), parseFloat(data[0].lon)]);
+            }
+        } catch (error) {}
+    }
+
+    // ==========================================
+    // 2. COMPASS & TILT
+    // ==========================================
+    function createOnMapCompass(id, latlng) {
+        let icon = L.divIcon({
+            className: 'custom-compass-icon',
+            html: `<div class="map-compass-container" id="map-compass-${id}" onmousedown="startCompassRotate(event, ${id})"><div class="compass-center"></div><div class="map-compass-arrow" id="map-arrow-${id}" style="transform: rotate(180deg);"></div></div>`,
+            iconSize: [80, 80], iconAnchor: [40, 40]
+        });
+        compassMarkers[id] = L.marker(latlng, {icon: icon, draggable: true}).addTo(map);
+        compassMarkers[id].on('dblclick', function(e) { L.DomEvent.stopPropagation(e); });
+    }
+    function startCompassRotate(e, id) {
+        if (e.target.className === 'compass-center') return;
+        L.DomEvent.disableClickPropagation(e.target);
+        map.dragging.disable(); activeCompassId = id;
+        document.addEventListener('mousemove', rotateCompass); document.addEventListener('mouseup', stopCompassRotate);
+    }
+    function rotateCompass(e) {
+        if (!activeCompassId) return;
+        let el = document.getElementById(`map-compass-${activeCompassId}`);
+        let rect = el.getBoundingClientRect();
+        let rad = Math.atan2(e.clientX - (rect.left + rect.width/2), -(e.clientY - (rect.top + rect.height/2)));
+        let deg = Math.round(rad * (180 / Math.PI));
+        if (deg < 0) deg += 360;
+        document.getElementById(`azimuth-input-${activeCompassId}`).value = deg;
+        document.getElementById(`map-arrow-${activeCompassId}`).style.transform = `rotate(${deg}deg)`;
+    }
+    function stopCompassRotate() { document.removeEventListener('mousemove', rotateCompass); document.removeEventListener('mouseup', stopCompassRotate); map.dragging.enable(); }
+    function manualCompassUpdate(id, value) { document.getElementById(`map-arrow-${id}`).style.transform = `rotate(${value}deg)`; }
+
+    function createRoofCard(id, area, panelCount) {
+        let cardHTML = `
+            <div class="roof-card" id="roof-${id}">
+                <div class="roof-header">
+                    <span>Roof Space #${id}</span>
+                    <span style="font-size: 12px; color:#7f8c8d;">Area: ${area.toFixed(1)} m²</span>
+                </div>
+                <div style="font-size: 11px; color: #e67e22; margin-bottom: 8px;">✎ Adjust orientation & tilt below for accuracy:</div>
+                <div style="display:flex; gap:10px;">
+                    <div style="width:50%;">
+                    <label>Azimuth (0-359):
+                        <span class="tooltip">?<span class="tooltiptext">The compass direction your roof faces. 0° is North, 90° is East, 180° is South. Rotate the map compass to match your roof.</span></span>
+                    </label><input type="number" id="azimuth-input-${id}" value="180" oninput="manualCompassUpdate(${id}, this.value)"></div>
+                    <div style="width:50%;"><label>Roof Tilt (Deg):
+                        <span class="tooltip">?<span class="tooltiptext">The angle of your roof. Flat roofs are 0°, while standard pitched roofs are usually between 15° and 30°.</span></span>
+                    </label><input type="number" id="tilt-input-${id}" value="10" oninput="manualTiltUpdate(${id}, this.value)"></div>
+                </div>
+                <div class="tilt-visualizer" onmousedown="startTiltDrag(event, ${id})">
+                    <span class="tilt-instruction">Click & Drag up/down</span>
+                    <div class="roof-line" id="roof-line-${id}" style="transform: rotate(-10deg);"></div><div class="house-base"></div>
+                </div>
+            </div>`;
+        document.getElementById('roof-spaces-container').insertAdjacentHTML('beforeend', cardHTML);
+    }
+
+    let startY=0, startAngle=0;
+    function startTiltDrag(e, id) { activeTiltId = id; startY = e.clientY; startAngle = parseFloat(document.getElementById(`tilt-input-${id}`).value); document.addEventListener('mousemove', dragTilt); document.addEventListener('mouseup', stopTiltDrag); }
+    function dragTilt(e) { if (!activeTiltId) return; let newAngle = Math.round(startAngle + ((startY - e.clientY) * 0.5)); newAngle = Math.max(0, Math.min(newAngle, 90)); document.getElementById(`tilt-input-${activeTiltId}`).value = newAngle; document.getElementById(`roof-line-${activeTiltId}`).style.transform = `rotate(-${newAngle}deg)`; }
+    function stopTiltDrag() { document.removeEventListener('mousemove', dragTilt); document.removeEventListener('mouseup', stopTiltDrag); activeTiltId = null; }
+    function manualTiltUpdate(id, val) { document.getElementById(`roof-line-${id}`).style.transform = `rotate(-${Math.max(0, Math.min(val, 90))}deg)`; }
+
+    function clearRoofs() {
+        drawnItems.clearLayers();
+        document.getElementById('roof-spaces-container').innerHTML = "";
+        document.getElementById('top3-results').style.display = "none";
+        document.getElementById('calc-btn').style.display = "none";
+        roofCount = 0;
+        for (let k in compassMarkers) map.removeLayer(compassMarkers[k]);
+        compassMarkers = {};
+    }
+
+    // ==========================================
+    // 3. API CALL & RESULT HANDLING
+    // ==========================================
+    async function calculateSolar() {
+        if (roofCount === 0) { alert("Please draw at least one roof space!"); return; }
+
+        const button = document.getElementById('calc-btn');
+        button.innerText = "Running Physics Engine..."; button.style.backgroundColor = "#95a5a6";
+
+        let arrayConfigs = [];
+        for (let i = 1; i <= roofCount; i++) {
+            let layers = drawnItems.getLayers();
+            let areaSqm = L.GeometryUtil.geodesicArea(layers[i-1].getLatLngs()[0]);
+
+            arrayConfigs.push({
+                fix_mount: true,
+                tilt: parseFloat(document.getElementById(`tilt-input-${i}`).value),
+                azimuth: parseFloat(document.getElementById(`azimuth-input-${i}`).value),
+                axis_azimuth: 0, max_angle: 0, racking_model: "close_mount",
+                available_area: areaSqm
+            });
+        }
+
+        let loadTarget = document.getElementById('use-load').checked ? parseFloat(document.getElementById('load-target').value) : null;
+        if(document.getElementById('use-load').checked && (!loadTarget || isNaN(loadTarget))) {
+            alert("Please enter a valid Annual Consumption number, or verify your estimation.");
+            button.innerText = "Analyze Configurations"; button.style.backgroundColor = "#27ae60";
+            return;
+        }
+
+        const requestData = {
+            latitude: parseFloat(document.getElementById('lat').value),
+            longitude: parseFloat(document.getElementById('lon').value),
+            module_name: document.getElementById('panel-brand').value,
+            inverter_name: "ABB__MICRO_0_25_I_OUTD_US_208__208V_",
+            arrays: arrayConfigs,
+            load_target_kwh: loadTarget,
+            load_profile_name: document.getElementById('load-profile-name').value,
+            is_commercial: document.getElementById('is-commercial').checked,
+        };
+
+        try {
+            const response = await fetch("http://127.0.0.1:8000/simulate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(requestData) });
+            const result = await response.json();
+
+            if (result.status === "success") {
+                globalSimulationData = result.alternatives;
+                renderTop3(result.alternatives);
+                const container = document.querySelector('.calculator-box');
+                container.scrollTop = container.scrollHeight;
+            } else alert("Error: " + result.message);
+        } catch (error) { alert("Server connection failed. Is FastAPI running on port 8000?"); }
+
+        button.innerText = "Analyze Configurations"; button.style.backgroundColor = "#27ae60";
+    }
+
+    function renderTop3(alternatives) {
+        const container = document.getElementById('options-list');
+        container.innerHTML = "";
+
+        alternatives.forEach((opt, index) => {
+            let html = `
+                <div class="result-option" onclick="openModal(${index})">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="rank-badge">Option #${opt.rank}</span>
+                        <span style="font-size:12px; color:#7f8c8d;">${opt.total_panels} Panels</span>
+                    </div>
+                    <div style="margin-top:10px; font-weight:bold; color:#2c3e50; font-size:18px;">
+                        ${opt.annual_kwh.toLocaleString()} kWh / yr
+                    </div>
+                    <div style="margin-top:5px; font-size:12px; color:#2980b9;">
+                        Click to view deep analysis ➔
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+        });
+        document.getElementById('top3-results').style.display = "block";
+    }
+
+    // ==========================================
+    // 4. THE MODAL, WIRING & DYNAMIC CHARTS
+    // ==========================================
+    function openModal(index) {
+        const data = globalSimulationData[index];
+
+        document.getElementById('m-panels').innerText = data.total_panels;
+        document.getElementById('m-generation').innerText = data.annual_kwh.toLocaleString() + " kWh";
+        document.getElementById('m-coverage').innerText = data.cover_percentage ? data.cover_percentage + "%" : "N/A";
+        document.getElementById('m-battery').innerText = data.recommended_battery_kwh + " kWh";
+        document.getElementById('m-ratio').innerText = data.dc_ac_ratio;
+
+        // Populate Hardware & Wiring Box
+        const pvSelect = document.getElementById('panel-brand');
+        const pvName = pvSelect.options[pvSelect.selectedIndex].text;
+
+        let wiringHTML = `<li style="margin-bottom:6px;"><strong>Solar Panels:</strong> ${pvName}</li>`;
+        wiringHTML += `<li style="margin-bottom:6px;"><strong>Inverter:</strong> ${data.inverter}</li>`;
+        wiringHTML += `<li style="margin-bottom:6px;"><strong>Battery Unit:</strong> ${data.recommended_battery_kwh} kWh Capacity</li>`;
+
+        data.wiring_layout.forEach((strings, idx) => {
+            let totalFacePanels = strings.reduce((a, b) => a + b, 0);
+            let strCount = strings.length;
+            wiringHTML += `<li style="margin-top:10px; color:#e67e22;"><strong>Roof Face ${idx + 1} Wiring:</strong> ${totalFacePanels} Panels &rarr; Wired as ${strCount} string(s) of [${strings.join(", ")}] into the inverter.</li>`;
+        });
+        document.getElementById('m-wiring').innerHTML = wiringHTML;
+
+        // Store 8760 data globally so the chart clicker can access it
+        currentSolar8760 = data.raw_data.hourly_solar_watts;
+        currentLoad8760 = data.raw_data.hourly_load_watts;
+        currentSoc8760 = data.raw_data.hourly_soc_kwh;
+
+        // 1. Initial Monthly Aggregation
+        let monthlySolar = new Array(12).fill(0);
+        let monthlyLoad = new Array(12).fill(0);
+        let daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+        let hCount = 0;
+        for(let m=0; m<12; m++) {
+            for(let d=0; d<daysInMonth[m]; d++) {
+                for(let h=0; h<24; h++) {
+                    monthlySolar[m] += currentSolar8760[hCount] / 1000;
+                    monthlyLoad[m] += currentLoad8760[hCount];
+                    hCount++;
+                }
+            }
+        }
+
+        drawBaseCharts(monthlySolar, monthlyLoad);
+        updateDailyChartsForMonth(-1); // -1 means "Whole Year"
+
+        document.getElementById('analysisModal').style.display = "block";
+    }
+
+    function closeModal() {
+        document.getElementById('analysisModal').style.display = "none";
+    }
+
+    // A helper to slice the 8760 data and redraw the daily charts
+    function updateDailyChartsForMonth(monthIndex) {
+        let daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+        let monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+        let startHour = 0;
+        let endHour = 8760;
+        let numDays = 365;
+        let titleSuffix = "(Yearly Average)";
+
+        if (monthIndex >= 0) {
+            let startDay = 0;
+            for(let m=0; m<monthIndex; m++) {
+                startDay += daysInMonth[m];
+            }
+            startHour = startDay * 24;
+            endHour = startHour + (daysInMonth[monthIndex] * 24);
+            numDays = daysInMonth[monthIndex];
+            titleSuffix = `(${monthNames[monthIndex]} Average)`;
+        }
+
+        let hourlyAvgSolar = new Array(24).fill(0);
+        let hourlyAvgLoad = new Array(24).fill(0);
+        let hourlyAvgSoc = new Array(24).fill(0);
+
+        for (let i = startHour; i < endHour; i++) {
+            let hr = i % 24; // Timezone is handled in backend
+            hourlyAvgSolar[hr] += (currentSolar8760[i] / 1000) / numDays;
+            hourlyAvgLoad[hr] += (currentLoad8760[i]) / numDays;
+            hourlyAvgSoc[hr] += (currentSoc8760[i]) / numDays;
+        }
+
+        // Push new data into existing charts
+        if (dailySolarChartObj) {
+            dailySolarChartObj.data.datasets[0].data = hourlyAvgSolar;
+            dailySolarChartObj.options.plugins.title.text = `Average Solar Curve ${titleSuffix}`;
+            dailySolarChartObj.update();
+        }
+        if (dailyLoadChartObj) {
+            dailyLoadChartObj.data.datasets[0].data = hourlyAvgLoad;
+            dailyLoadChartObj.data.datasets[1].data = hourlyAvgSoc;
+            dailyLoadChartObj.options.plugins.title.text = `Average Load & Battery State ${titleSuffix}`;
+            dailyLoadChartObj.update();
+        }
+
+        // Update UI Text Hint
+        document.getElementById('chart-hint').innerText = monthIndex >= 0 ?
+            `Showing data for ${monthNames[monthIndex]}. Click background to reset.` :
+            "Click any month bar to filter the daily charts below (Click background to reset)";
+    }
+
+    function drawBaseCharts(mSolar, mLoad) {
+        if(monthlyChartObj) monthlyChartObj.destroy();
+        if(dailySolarChartObj) dailySolarChartObj.destroy();
+        if(dailyLoadChartObj) dailyLoadChartObj.destroy();
+
+        // 1. Monthly Chart (Now clickable!)
+        const ctxMonth = document.getElementById('monthlyChart').getContext('2d');
+        monthlyChartObj = new Chart(ctxMonth, {
+            type: 'bar',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                datasets: [
+                    { label: 'Solar Generation (kWh)', data: mSolar, backgroundColor: '#2ecc71' },
+                    { label: 'Energy Consumption (kWh)', data: mLoad, backgroundColor: '#e74c3c' }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { title: { display: true, text: 'Monthly Energy Balance' } },
+                onClick: (e, activeElements) => {
+                    if (activeElements.length > 0) {
+                        const monthIndex = activeElements[0].index; // 0 to 11
+                        updateDailyChartsForMonth(monthIndex);
+                    } else {
+                        updateDailyChartsForMonth(-1); // Reset to yearly
+                    }
+                }
+            }
+        });
+
+        // 2. Daily Solar Chart (Instantiated empty, populated instantly by updateDailyChartsForMonth)
+        const ctxDailySolar = document.getElementById('dailySolarChart').getContext('2d');
+        dailySolarChartObj = new Chart(ctxDailySolar, {
+            type: 'line',
+            data: {
+                labels: ['00:00','01:00','02:00','03:00','04:00','05:00','06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00','23:00'],
+                datasets: [{ label: 'Avg Solar Output (kW)', data: [], borderColor: '#f1c40f', backgroundColor: 'rgba(241, 196, 15, 0.2)', fill: true, tension: 0.4 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Average Solar Curve' } } }
+        });
+
+        // 3. Daily Load Chart (Instantiated empty)
+        const ctxDailyLoad = document.getElementById('dailyLoadChart').getContext('2d');
+        dailyLoadChartObj = new Chart(ctxDailyLoad, {
+            type: 'line',
+            data: {
+                labels: ['00:00','01:00','02:00','03:00','04:00','05:00','06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00','23:00'],
+                datasets: [
+                    { label: 'Avg Daily Load (kW)', data: [], borderColor: '#e74c3c', borderWidth: 3, backgroundColor: 'rgba(231, 76, 60, 0.1)', fill: true, tension: 0.4, yAxisID: 'y' },
+                    { label: 'Battery Charge Level (kWh)', data: [], borderColor: '#3498db', borderDash: [5, 5], fill: false, tension: 0.4, yAxisID: 'y1' }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { title: { display: true, text: 'Average Load & Battery State' } },
+                scales: {
+                    y: { type: 'linear', display: true, position: 'left', title: {display: true, text: 'Load (kW)'} },
+                    y1: { type: 'linear', display: true, position: 'right', title: {display: true, text: 'Battery (kWh)'}, grid: {drawOnChartArea: false} }
+                }
+            }
+        });
+    }
+</script>
+
+</body>
+</html>
