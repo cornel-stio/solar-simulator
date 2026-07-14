@@ -8,7 +8,7 @@ Solar Simulator bridges the gap between residential solar calculators and commer
 
 ---
 
-## 🚀 Key Features
+## Key Features
 
 *   **Interactive Geospatial Mapping:** Built with Leaflet, users can search for any address, draw polygon roof boundaries over satellite imagery, and set exact roof azimuths and tilts.
 *   **Hybrid Physics Engine (Residential & Commercial):** 
@@ -21,13 +21,23 @@ Solar Simulator bridges the gap between residential solar calculators and commer
 
 ---
 
-## 📸 Screenshots
+## Roadmap & Upcoming Features
+
+This project is in active development. While the core physics engine is fully operational, upcoming updates will focus on financial modeling and localized regulations:
+
+*   **Financial & ROI Modeling:** Automated Return on Investment (ROI) calculations, payback periods, and savings projections tailored to the user's specific location and local energy tariffs.
+*   **Indonesian Regulatory Integration:** Logic to handle specific Indonesian PV installation quotas, net-metering policies, and export limits.
+*   **Expanded Databases:** A larger, more comprehensive hardware database for solar panels and inverters, localized cost data, and a wider variety of granular load curve templates.
+
+---
+
+## Screenshots
 
 <img width="959" height="503" alt="Screenshot 2026-07-13 224208" src="https://github.com/user-attachments/assets/e45048e1-fc74-44ab-a054-be19c21eb0ad" />
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 **Backend (Physics & Data Engine):**
 *   **Python 3**
@@ -44,7 +54,7 @@ Solar Simulator bridges the gap between residential solar calculators and commer
 
 ---
 
-## ⚙️ Local Installation & Setup
+## Local Installation & Setup
 
 To run this application locally, you will need Python installed on your machine.
 
@@ -71,7 +81,7 @@ Simply open the `index.html` file in any modern web browser.
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 *   `main.py`: The FastAPI backend, physics engine, combinatorial stringing logic, and PVGIS data parser.
 *   `index.html`: The complete frontend UI, map logic, API fetch calls, and Chart.js rendering.
